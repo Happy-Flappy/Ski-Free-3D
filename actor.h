@@ -38,10 +38,14 @@ class Dog
 		if(renderID >= renders.size() || renderID < 0)
 			return;
 		Render &r = renders[renderID];
+		if(r.spriteID < 0 || r.spriteID >= sprites.size())
+			return;
+		ws::Sprite &sprite = sprites[r.spriteID];
+		
 		r.y = hillHeight;
-		if(!r.sprite.hasTexture())
+		if(!sprite.hasTexture())
 		{
-			r.sprite.setTexture(actorTex);
+			sprite.setTexture(actorTex);
 			currentShift = shifts.idle;
 			goX = (std::rand()%10) - 5;
 			goZ = (std::rand()%10) - 5;
@@ -55,7 +59,7 @@ class Dog
 			currentShift.currentframe = 0;
 			currentShift.start = true;
 		}
-		r.sprite.setTextureRect(ws::Shift(currentShift));
+		sprite.setTextureRect(ws::Shift(currentShift));
 		
 		if(timer.getSeconds() > 1 && state == "bark")
 		{
@@ -101,7 +105,7 @@ class Snowman
 	
 	float gravity = 0.5;
     ws::Vec3f velocity = {0,0,0};
-    float maxSpeed = 1.7f;          // maximum speed
+    float maxSpeed = 3.0f;//1.7          // maximum speed
     float wanderSpeed = 0.5f;
 	float steerStrength = 0.5f;     // how quickly it turns (lower = more sluggish)
     float noiseAmount = 0.2f;       // random perturbation for inaccuracy
@@ -167,7 +171,7 @@ class Snowman
 		velocity.z += std::sin(angle) * sideStrength;				
 		
 		currentShift = shifts.jump;
-		r.sprite.setTextureRect(ws::Shift(currentShift));
+		sprites[r.spriteID].setTextureRect(ws::Shift(currentShift));
 		currentShift.start = true;
 		state = "jump";		
 	}
@@ -181,7 +185,7 @@ class Snowman
 			state = "chase";
 			currentShift = shifts.chase;
 			
-			r.sprite.setTextureRect(ws::Shift(currentShift));
+			sprites[r.spriteID].setTextureRect(ws::Shift(currentShift));
 			currentShift.start = true;
 			jumpTime = (rand()%10) + 2;
 			timer.restart();
@@ -256,18 +260,21 @@ class Snowman
 		if(renderID >= renders.size() || renderID < 0)
 			return;
 		Render &r = renders[renderID];
-		if(!r.sprite.hasTexture())
+		if(r.spriteID < 0 || r.spriteID >= sprites.size())
+			return;
+		ws::Sprite &sprite = sprites[r.spriteID];
+		if(!sprite.hasTexture())
 		{
 			state = "wander";
 			currentShift = shifts.chase;
 			currentShift.delay = 0.05;
-			r.sprite.setTexture(actorTex,true);
-			r.sprite.setTextureRect(ws::Shift(currentShift));
-			r.sprite.setOrigin(r.sprite.getTextureRect().width / 2,r.sprite.getTextureRect().height);
+			sprite.setTexture(actorTex,true);
+			sprite.setTextureRect(ws::Shift(currentShift));
+			sprite.setOrigin(sprite.getTextureRect().width / 2,sprite.getTextureRect().height);
 			r.scale = {scale,scale};
 		}
 
-		r.sprite.setTextureRect(ws::Shift(currentShift));
+		sprite.setTextureRect(ws::Shift(currentShift));
 
 		r.x += velocity.x;
 		r.y += velocity.y;

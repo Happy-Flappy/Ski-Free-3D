@@ -31,11 +31,26 @@ class Camera
 	int perspective = 300;
 	int visible = 800;
 	
+	double sinYaw = 0;
+	double cosYaw = 0;
+	double sinPitch = 0;
+	double cosPitch = 0;		
+
+	
+	
 	Camera(double x,double y,double z)
 	{
 		this->x = x;
 		this->y = y;
 		this->z = z;
+	}
+	
+	void getTrigs()
+	{
+		sinYaw = std::sin(yaw);
+		cosYaw = std::cos(yaw);
+		sinPitch = std::sin(pitch);
+		cosPitch = std::cos(pitch);				
 	}
 	
 	bool project(float x,float y,float z,float &screenX,float &screenY,float &scale)
@@ -45,12 +60,12 @@ class Camera
 		float relativeY = y - this->y;
 		
 		float yawY = relativeY;
-        float yawX = relativeX * std::cos(yaw) - relativeZ * std::sin(yaw);
-        float yawZ = relativeX * std::sin(yaw) + relativeZ * std::cos(yaw);
+        float yawX = relativeX * cosYaw - relativeZ * sinYaw;
+        float yawZ = relativeX * sinYaw + relativeZ * cosYaw;
 
 		float pitchX = yawX;
-		float pitchY = yawY * std::cos(pitch) - yawZ * std::sin(pitch);
-		float pitchZ = yawY * std::sin(pitch) + yawZ * std::cos(pitch);
+		float pitchY = yawY * cosPitch - yawZ * sinPitch;
+		float pitchZ = yawY * sinPitch + yawZ * cosPitch;
 		
 		float rotX = pitchX;
 		float rotY = pitchY;
@@ -71,16 +86,16 @@ class Camera
 	}
 };
 
+
+
+std::vector<ws::Sprite> sprites;
+std::vector<ws::Radial> shapes;
+
 struct Render
 {
-	Render()
-	{
-		shape.setRadius(0);
-		shape.setFillColor(ws::Hue::transparent);
-	}
+	int shapeID = -1;
+	int spriteID = -1;
 	ws::Vec2f scale = {1,1};
-	ws::Sprite sprite;
-	ws::Radial shape;
 	float x,y,z;
 	float depth = 0;
 };
@@ -145,6 +160,9 @@ class Map
 		image.loadFromFile(path);
 		width = image.getSize().x;
 		depth = image.getSize().y;
+		
+		shapes.reserve(shapes.size() + ((width*depth)/density));
+		
 	    for(float x = 0; x < image.getSize().x; x += density) 
 		{
 			for(float z = 0; z < image.getSize().y; z += density) 
@@ -153,12 +171,15 @@ class Map
 	            r.x = x;
 	            r.z = z;
 	            r.y = getHillHeight(x, z);
-
-				r.shape.setFillColor(ws::Hue::white);
-				r.shape.setBorderWidth(0);
-				r.shape.setRadius(50);
-				r.shape.setOrigin(r.shape.getRadius(),0);
-				r.shape.setPointCount(5);
+				
+				ws::Radial shape;
+				shape.setFillColor(ws::Hue::white);
+				shape.setBorderWidth(0);
+				shape.setRadius(50);
+				shape.setOrigin(shape.getRadius(),0);
+				shape.setPointCount(5);
+				r.shapeID = shapes.size();
+				shapes.push_back(shape);
 				renders.push_back(r);
 	        }
 	    }
@@ -187,8 +208,8 @@ class Map
 				(int)(base.b * tinted.z)
 			);				
 			
-			d.shape.setFillColor(litColor);
-			d.shape.setBorderColor(litColor);			
+			shapes[d.shapeID].setFillColor(litColor);
+			shapes[d.shapeID].setBorderColor(litColor);			
 		}
 	}
 
@@ -215,6 +236,7 @@ void populate(std::string path)
 {
 	ws::Texture tex;
 	tex.loadFromFile(path);
+	
 	for(int x=0;x<tex.getSize().x;x++)
 	{
 		for(int z=0;z<tex.getSize().y;z++)
@@ -229,9 +251,12 @@ void populate(std::string path)
 				continue;
 			if(c == ws::Hue::green)
 			{
-				r.sprite.setTexture(exploTex,true);
-				r.sprite.setTextureRect({0,1361,92,125});
-				r.sprite.setOrigin(r.sprite.getTextureRect().width/2, r.sprite.getTextureRect().height - 20);
+				ws::Sprite sprite;
+				sprite.setTexture(exploTex,true);
+				sprite.setTextureRect({0,1361,92,125});
+				sprite.setOrigin(sprite.getTextureRect().width/2, sprite.getTextureRect().height - 20);
+				r.spriteID = sprites.size();
+				sprites.push_back(sprite);
 			}
 			if(c == ws::Hue(31,31,31))
 			{
@@ -239,7 +264,9 @@ void populate(std::string path)
 				d.renderID = renders.size();
 				dogs.push_back(d);
 				dogs.back().update(r.y);
-				r.sprite.setOrigin(r.sprite.getTextureRect().width/2, r.sprite.getTextureRect().height + 10);
+				r.spriteID = sprites.size();
+				sprites.push_back(ws::Sprite());
+				sprites.back().setOrigin(sprites.back().getTextureRect().width/2, sprites.back().getTextureRect().height + 10);
 			}
 			renders.push_back(r);
 		}
@@ -339,7 +366,7 @@ int main()
 	camera.visible = 1000;
 	map.makeTerrain("converted.png");
 	populate("map.bmp");
-	
+	grid.build(renders);	
 	
 	ws::Timer clock;
 	double timesincelastupdate = 0;
@@ -349,9 +376,10 @@ int main()
 	manRender.x = std::rand() % map.width;
 	manRender.z = std::rand() % map.depth;
 	manRender.y = camera.y;
-	
+	manRender.spriteID = sprites.size();
+	sprites.push_back(ws::Sprite());
+	snowman.renderID = renders.size();
 	renders.push_back(manRender);
-	snowman.renderID = renders.size()-1;
 	snowman.update(map.getHillHeight(renders.back().x,renders.back().z+200),{camera.x,camera.z});
 	
 	Player player;
@@ -359,7 +387,6 @@ int main()
 	float angle = 0;
 	ws::Timer moveTimer;
 
-	grid.build(renders);
 	std::vector<int> renderIndices;
 	renderIndices.reserve(2048);
 	std::vector<int> nearby;
@@ -379,16 +406,17 @@ int main()
 		timesincelastupdate += clock.getSeconds();
 		clock.restart();
 		
-		float sinYaw = std::sin(camera.yaw);
-		float cosYaw = std::cos(camera.yaw);
-		float sinPitch = std::sin(camera.pitch);
-		float cosPitch = std::cos(camera.pitch);		
+		camera.getTrigs();
+		float sinYaw = camera.sinYaw;
+		float cosYaw = camera.cosYaw;
+		float sinPitch = camera.sinPitch;
+		float cosPitch = camera.cosPitch;		
 		
 		while(timesincelastupdate > timeperframe)
 		{
 			timesincelastupdate -= timeperframe;
 			
-			window.clear(ws::Hue::cyan);
+			
 			
 			camera.z += player.velocity.z;
 			camera.x += player.velocity.x;
@@ -454,6 +482,8 @@ int main()
 			}			
 
 		}
+		//window.getView().setPortSize({960/8,540/8});
+		window.clear(ws::Hue::cyan);
 		
 		float floor = map.getHillHeight(camera.x,camera.z) - 50;
 		if(camera.y > floor)
@@ -465,9 +495,20 @@ int main()
 			player.velocity.y += gravity;
 		
 		renderIndices.clear();
-		nearby.clear();
-		grid.query(camera.x, camera.z, camera.visible, nearby);
 
+		ws::Timer nearbyTimer;
+		nearby.clear();
+		
+		//0.5 pushes the search center forward 
+		//0.6 is the padding so that objects dont pop in and out of existence due to that 0.1 buffer.
+		float lookAheadDist = camera.visible * 0.5f;
+		float queryX = camera.x + sinYaw * lookAheadDist;
+		float queryZ = camera.z + cosYaw * lookAheadDist;
+		grid.query(queryX, queryZ, camera.visible * 0.6f, nearby);
+
+		double nearbyMs = nearbyTimer.getMilliSeconds();
+
+		renderIndices.clear();
 		for(int idx : nearby)
 		{
 			Render& d = renders[idx];
@@ -481,35 +522,53 @@ int main()
 				renderIndices.push_back(idx);
 			}
 		}
+		
+		renderIndices.push_back(snowman.renderID);
+		for(auto& d : dogs)
+			renderIndices.push_back(d.renderID);
 
+		ws::Timer sortTimer;
 		std::sort(renderIndices.begin(), renderIndices.end(), [](int a, int b){
 			return renders[a].depth > renders[b].depth;
 		});
+		double sortMs = sortTimer.getMilliSeconds();
 
+		ws::Timer drawTimer;
 		for(int idx : renderIndices)
 		{
 			Render& d = renders[idx];
 			float screenX, screenY, scale;
 			if(!camera.project(d.x, d.y, d.z, screenX, screenY, scale)) continue;
-
-			d.shape.setPosition(screenX, screenY);
-			d.shape.setScale(scale, scale);
 			
-			if(!d.sprite.hasTexture() || !d.sprite.getTexture().isValid())
+			if(d.shapeID != -1 && d.shapeID >= 0 && d.shapeID < shapes.size())
 			{
-				window.draw(d.shape);
-				continue;
+				ws::Radial &rad = shapes[d.shapeID];
+				rad.setPosition(screenX, screenY);
+				rad.setScale(scale, scale);
+				window.draw(rad);
+			}		
+			if(d.spriteID != -1 && d.spriteID >= 0 && d.spriteID < sprites.size())
+			{
+				ws::Sprite &spr = sprites[d.spriteID];
+				if(spr.hasTexture() && spr.getTexture().isValid())
+				{
+					spr.setPosition(screenX, screenY);
+					spr.setScale(d.scale.x * scale, d.scale.y * scale);
+					window.draw(spr);					
+				}
 			}
-			d.sprite.setPosition(screenX, screenY);
-			d.sprite.setScale(d.scale.x * scale, d.scale.y * scale);
-			window.draw(d.sprite);
+			
 		}
+		float drawMs = drawTimer.getMilliSeconds();
 
 		window.display();
 
 		fpsFrameCount++;
 		if(fpsTimer.getSeconds() > 1.0)
 		{
+		 	std::cout << "Draw Delay: " << drawMs << std::endl;
+			std::cout << "Query Delay: " << nearbyMs << std::endl;
+			std::cout << "Sort Delay: " << sortMs << std::endl;
 			std::cout << "FPS: " << fpsFrameCount << std::endl;
 			fpsFrameCount = 0;
 			fpsTimer.restart();
