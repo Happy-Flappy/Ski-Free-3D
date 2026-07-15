@@ -1,0 +1,3 @@
+@echo off
+echo Compiling... 
+g++ -o main.exe main.cpp -lgdi32 -luser32 -lgdiplus -lole32 -lwinmm -lcomctl32 -lcomdlg32 -luuid -lshell32 -static -mwindows
