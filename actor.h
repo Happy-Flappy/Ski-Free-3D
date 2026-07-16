@@ -7,6 +7,7 @@ void loadTextures()
 	actorTex.setScaleMode(ws::Texture::ScaleMode::NearestNeighbor);
 	exploTex.loadFromFile("ASSETS//explo.png");
 	exploTex.setScaleMode(ws::Texture::ScaleMode::NearestNeighbor);	
+	
 }
 
 class Dog
