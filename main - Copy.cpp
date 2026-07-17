@@ -7,7 +7,74 @@
 #include <cmath>
 
 ws::Vec3f sunLight = {0.5, 0.8, 0.5};
-ws::Vec3f lightColor = {1.0, 1.0, 1.0};
+
+std::vector<ws::Vec3f> lightColors = 
+{
+	{0.05, 0.05, 0.15},//night 0
+	{0.08, 0.06, 0.12},//pre-dawn 1
+	{1.0, 0.5, 0.2},//dawn 2
+	{1.0, 0.85, 0.6},//Morning	Soft golden‑yellow 3	
+	{1.0, 0.95, 0.8},//Mid‑morning	Slightly warm white 4
+	{0.95, 0.95, 1.0},//Noon Pure white with a hint of blue 5
+	{1.0, 0.9, 0.7},//Afternoon	Warmer white 6
+	{1.0, 0.7, 0.3},//Golden Hour (late afternoon)	Rich orange‑gold 7
+	{1.0, 0.4, 0.1},//Sunset	Deep red‑orange 8
+	{0.6, 0.3, 0.7},//Dusk / Twilight	Purple‑blue with pink remnants 9
+	{0.2, 0.2, 0.6}//Blue hour (after sunset)	Deep blue‑purple	 10
+};
+
+ws::Vec3f lightColor = lightColors[5];
+
+
+
+void makeSky(ws::Texture &tex,int width,int height)
+{
+	tex.create(width,height);
+	
+    ws::Vec3f topColor = {
+        lightColor.x * 0.3f,
+        lightColor.y * 0.3f,
+        lightColor.z * 0.5f   // slightly more blue at zenith
+    };
+    ws::Vec3f bottomColor = {
+        std::min(lightColor.x * 1.3f, 1.0f),
+        std::min(lightColor.y * 1.3f, 1.0f),
+        std::min(lightColor.z * 1.3f, 1.0f)
+    };
+
+    // Clamp to [0,1] just in case
+    auto clamp01 = [](float v) { return v < 0 ? 0 : (v > 1 ? 1 : v); };
+    topColor.x = clamp01(topColor.x);
+    topColor.y = clamp01(topColor.y);
+    topColor.z = clamp01(topColor.z);
+    bottomColor.x = clamp01(bottomColor.x);
+    bottomColor.y = clamp01(bottomColor.y);
+    bottomColor.z = clamp01(bottomColor.z);
+
+	auto lerpVec3 = [](const ws::Vec3f& a, const ws::Vec3f& b, float t) -> ws::Vec3f{
+		return {
+			a.x + (b.x - a.x) * t,
+			a.y + (b.y - a.y) * t,
+			a.z + (b.z - a.z) * t
+		};
+	};
+
+    for (int x = 0; x < width; x++) {
+        for (int y = 0; y < height; y++) {
+            // t = 0 at top, 1 at bottom
+            float t = (float)y / (float)height;
+            ws::Vec3f color = lerpVec3(topColor, bottomColor, t);
+
+            // Convert to 0-255 and set pixel
+            ws::Hue pixel(
+                (int)(color.x * 255),
+                (int)(color.y * 255),
+                (int)(color.z * 255)
+            );
+            tex.setPixel(x, y, pixel);
+        }
+    }	
+}
 
 void normalize(ws::Vec3f &v)
 {
@@ -36,7 +103,7 @@ class Camera
 	double sinPitch = 0;
 	double cosPitch = 0;		
 
-	
+
 	
 	Camera(double x,double y,double z)
 	{
@@ -84,7 +151,27 @@ class Camera
 
 		return true;		
 	}
+	
+	ws::Vec3f unproject(float screenX, float screenY, float depth)
+	{
+		float relX = (screenX - 960.0f/2.0f) * depth / perspective;
+		float relY = (screenY - 540.0f/2.0f) * depth / perspective;
+		float relZ = depth;
+
+		// Inverse pitch rotation
+		float yawX = relX;
+		float yawY = relY * cosPitch + relZ * sinPitch;
+		float yawZ = -relY * sinPitch + relZ * cosPitch;
+
+		// Inverse yaw rotation
+		float worldRelX = yawX * cosYaw + yawZ * sinYaw;
+		float worldRelY = yawY;
+		float worldRelZ = -yawX * sinYaw + yawZ * cosYaw;
+
+		return { x + worldRelX, y + worldRelY, z + worldRelZ };
+	}	
 };
+Camera camera(0,0,0);
 
 
 
@@ -98,6 +185,7 @@ struct Render
 	ws::Vec2f scale = {1,1};
 	float x,y,z;
 	float depth = 0;
+	
 };
 std::vector<Render> renders;
 
@@ -149,6 +237,8 @@ class Map
 	int depth = 8192;
 	int density = 40;
 	int yDensity = 5;
+
+	float TERRAIN_RADIUS = 50;	
 	
 	float getHillHeight(float x, float z) 
 	{
@@ -167,7 +257,7 @@ class Map
 		{
 			for(float z = 0; z < image.getSize().y; z += density) 
 			{	
-				Render r;
+ 				Render r;
 	            r.x = x;
 	            r.z = z;
 	            r.y = getHillHeight(x, z);
@@ -175,41 +265,56 @@ class Map
 				ws::Radial shape;
 				shape.setFillColor(ws::Hue::white);
 				shape.setBorderWidth(0);
-				shape.setRadius(50);
+				shape.setRadius(TERRAIN_RADIUS);
 				shape.setOrigin(shape.getRadius(),0);
-				shape.setPointCount(5);
+				shape.setPointCount(20);
 				r.shapeID = shapes.size();
 				shapes.push_back(shape);
-				renders.push_back(r);
+				renders.push_back(r); 
 	        }
 	    }
 		
 		makeLighting();
 	}
 	
+	void makeLighting(Render &d)
+	{
+		if(d.shapeID < 0 || d.shapeID >= shapes.size())
+			return;
+		ws::Vec3f normal = getTerrainNormal(d.x, d.z);
+		float diffuse = std::max(0.0f, normal.x * sunLight.x + 
+									  normal.y * sunLight.y + 
+									  normal.z * sunLight.z);
+		
+		float ambient = 0.25f;
+		float brightness = ambient + (1.0f - ambient) * diffuse;
+
+		ws::Hue base = ws::Hue::white;
+		
+		
+		ws::Vec3f tinted = {brightness * lightColor.x, brightness * lightColor.y, brightness * lightColor.z};
+		ws::Hue litColor = ws::Hue(
+			(int)(base.r * tinted.x),
+			(int)(base.g * tinted.y),
+			(int)(base.b * tinted.z)
+		);				
+
+
+		ws::Hue::HSV hsv = litColor.toHSV();
+
+		float fogFactor = 1.0f - std::clamp(d.depth / camera.visible, 0.0f, 1.0f);
+		hsv.s *= fogFactor;
+		ws::Hue foggedColor = hsv.toHue();
+
+		shapes[d.shapeID].setFillColor(foggedColor);
+		shapes[d.shapeID].setBorderColor(foggedColor);				
+	}
+	
 	void makeLighting()
 	{
 		for(auto& d : renders)
 		{
-			ws::Vec3f normal = getTerrainNormal(d.x, d.z);
-			float diffuse = std::max(0.0f, normal.x * sunLight.x + 
-											  normal.y * sunLight.y + 
-											  normal.z * sunLight.z);
-			
-			float ambient = 0.25f;
-			float brightness = ambient + (1.0f - ambient) * diffuse;
-
-			ws::Hue base = ws::Hue::white;
-			
-			ws::Vec3f tinted = {brightness * lightColor.x, brightness * lightColor.y, brightness * lightColor.z};
-			ws::Hue litColor = ws::Hue(
-				(int)(base.r * tinted.x),
-				(int)(base.g * tinted.y),
-				(int)(base.b * tinted.z)
-			);				
-			
-			shapes[d.shapeID].setFillColor(litColor);
-			shapes[d.shapeID].setBorderColor(litColor);			
+			makeLighting(d);
 		}
 	}
 
@@ -272,7 +377,7 @@ void populate(std::string path)
 		}
 	}
 	
-/* 	for(int a=0;a<40;a++)
+/*  	for(int a=0;a<200;a++)
 	{
 		int x = std::rand()% map.width;
 		int z = std::rand()% map.depth;
@@ -283,9 +388,14 @@ void populate(std::string path)
 		r.spriteID = sprites.size();
 		ws::Sprite spr;
 		spr.setTexture(exploTex);
-		spr.setTextureRect();
+		spr.setTextureRect({0,1613,88,127});
+		spr.setOrigin(88/2,127);
 		sprites.push_back(spr);
-	} */
+		renders.push_back(r);
+	} 
+ */	
+ 
+	
 }
 
 float gravity = 1;
@@ -360,6 +470,8 @@ class Player
 	}
 };
 
+#include "editor.h"
+
 int main()
 {
 	loadTextures();
@@ -367,19 +479,19 @@ int main()
 	normalize(sunLight);
 	
 	ws::Wav music,atmos;
-/* 	music.open("ASSETS/MUSIC000.midi",0,true);
-	music.play();
+ 	//music.open("ASSETS/MUSIC000.midi",0,true);
+	//music.play();
 	atmos.open("ASSETS/creatorshome-mountain-wind-371074.mp3",1,true);
-	atmos.play(); */
+	atmos.play(); 
 	
 	srand(time(nullptr));
 	
 	ws::Window window(960,540,"");
 	ws::Vec2f windowSize = {960.0f,540.0f};
 	
-	Camera camera(map.width/2,0,100);
-	camera.visible = 1000;
 	map.makeTerrain("converted.png");
+	camera = Camera(map.width/2,0,100);
+	camera.visible = 1000;
 	populate("map.bmp");
 	grid.build(renders);	
 	
@@ -399,16 +511,7 @@ int main()
 	
 	
 	ws::Texture backTex;
-	backTex.create(window.getSize().x,window.getSize().y);
-	for(int x=0;x<window.getSize().x;x++)
-	for(int y=0;y<window.getSize().y;y++)
-	{
-		int yVal =  float(y) / float(window.getSize().y + 100) * 255;
-		yVal = std::abs(yVal - 255);
-		if(yVal < 200)
-			yVal = 200;
-		backTex.setPixel(x,y,ws::Hue(0,yVal,255));
-	}
+	makeSky(backTex,window.getSize().x,window.getSize().y);
 	ws::Sprite backSprite;
 	backSprite.setTexture(backTex);
 	
@@ -442,6 +545,8 @@ int main()
 		float cosYaw = camera.cosYaw;
 		float sinPitch = camera.sinPitch;
 		float cosPitch = camera.cosPitch;		
+		
+		
 		
 		while(timesincelastupdate > timeperframe)
 		{
@@ -513,8 +618,11 @@ int main()
 			}			
 
 		}
+		
+		placeTerrain(window);
+		
 		//window.getView().setPortSize({960/8,540/8});
-		window.clear(ws::Hue::cyan);
+		window.clear(ws::Hue::white);
 		window.draw(backSprite);
 		
 		float floor = map.getHillHeight(camera.x,camera.z) - 50;
@@ -566,6 +674,7 @@ int main()
 		});
 		double sortMs = sortTimer.getMilliSeconds();
 
+
 		ws::Timer drawTimer;
 		for(int idx : renderIndices)
 		{
@@ -573,8 +682,11 @@ int main()
 			float screenX, screenY, scale;
 			if(!camera.project(d.x, d.y, d.z, screenX, screenY, scale)) continue;
 			
+			map.makeLighting(d);
+			
 			if(d.shapeID != -1 && d.shapeID >= 0 && d.shapeID < shapes.size())
 			{
+				
 				ws::Radial &rad = shapes[d.shapeID];
 				rad.setPosition(screenX, screenY);
 				rad.setScale(scale, scale);
@@ -587,19 +699,34 @@ int main()
 				{
 					spr.setPosition(screenX, screenY);
 					spr.setScale(d.scale.x * scale, d.scale.y * scale);
-					window.draw(spr);					
+					spr.drawBlend(window.backBuffer);					
 				}
+				
+				
 			}
 			
 		}
 		float drawMs = drawTimer.getMilliSeconds();
 
+
+		int centerX = window.getView().getSize().x / 2;
+		int centerY = window.getView().getSize().y / 2;
+		float scaleAtDepth = (float)camera.perspective / buildDepth;
+		float screenRadius = map.TERRAIN_RADIUS * scaleAtDepth;
+		ws::Line line(
+			{ (float)centerX - screenRadius + 5, (float)centerY },
+			{ (float)centerX + screenRadius - 5, (float)centerY }
+		);
+		window.draw(line);
+		
+		
+		
 		window.display();
 
 		fpsFrameCount++;
 		if(fpsTimer.getSeconds() > 1.0)
 		{
-		 	std::cout << "Draw Delay: " << drawMs << std::endl;
+			std::cout << "Draw Delay: " << drawMs << std::endl;
 			std::cout << "Query Delay: " << nearbyMs << std::endl;
 			std::cout << "Sort Delay: " << sortMs << std::endl;
 			std::cout << "FPS: " << fpsFrameCount << std::endl;
