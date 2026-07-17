@@ -470,8 +470,6 @@ class Player
 	}
 };
 
-#include "editor.h"
-#include "physics.h"
 
 int main()
 {
@@ -490,8 +488,8 @@ int main()
 	ws::Window window(960,540,"");
 	ws::Vec2f windowSize = {960.0f,540.0f};
 	
-	map.makeTerrain("Mountain Range Height Map PNG.png");
-	camera = Camera(map.width/2,-1000,map.depth/2);
+	map.makeTerrain("converted.png");
+	camera = Camera(map.width/2,0,100);
 	camera.visible = 1000;
 	populate("map.bmp");
 	grid.build(renders);	
@@ -554,6 +552,11 @@ int main()
 			timesincelastupdate -= timeperframe;
 			
 			
+			
+			camera.z += player.velocity.z;
+			camera.x += player.velocity.x;
+			camera.y += player.velocity.y;
+			
 			float constSpeed = 2;
 			
 			if (ws::Global::getButton('W'))
@@ -598,15 +601,6 @@ int main()
 			}
 
 			player.update(camera);
-			player.velocity.y += gravity;
-
-			camera.z += player.velocity.z;
-			camera.x += player.velocity.x;
-			camera.y += player.velocity.y;			
-			
-			
-			resolveSphereCollision(player.velocity);
-			
 			
 			for(auto& d : dogs)
 			{
@@ -624,11 +618,19 @@ int main()
 
 		}
 		
-		placeTerrain(window);
 		
+		//window.getView().setPortSize({960/8,540/8});
 		window.clear(ws::Hue::white);
 		window.draw(backSprite);
 		
+		float floor = map.getHillHeight(camera.x,camera.z) - 50;
+		if(camera.y > floor)
+		{
+			player.velocity.y = 0;
+			camera.y = floor;
+		}
+		else
+			player.velocity.y += gravity;
 		
 		renderIndices.clear();
 
@@ -704,17 +706,6 @@ int main()
 		}
 		float drawMs = drawTimer.getMilliSeconds();
 
-
-		int centerX = window.getView().getSize().x / 2;
-		int centerY = window.getView().getSize().y / 2;
-		float scaleAtDepth = (float)camera.perspective / buildDepth;
-		float screenRadius = map.TERRAIN_RADIUS * scaleAtDepth;
-		ws::Line line(
-			{ (float)centerX - screenRadius + 5, (float)centerY },
-			{ (float)centerX + screenRadius - 5, (float)centerY }
-		);
-		window.draw(line);
-		
 		
 		
 		window.display();
