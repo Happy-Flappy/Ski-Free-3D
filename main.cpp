@@ -36,6 +36,9 @@ std::vector<Render> renders;
 float gravity = 1;
 #include "player.h"
 
+#include "editor.h"
+#include "physics.h"
+
 int main()
 {
 	loadTextures();
@@ -118,10 +121,6 @@ int main()
 			
 			
 			
-			camera.z += player.velocity.z;
-			camera.x += player.velocity.x;
-			camera.y += player.velocity.y;
-			
 			float constSpeed = 2;
 			
 			if (ws::Global::getButton('W'))
@@ -166,6 +165,15 @@ int main()
 			}
 
 			player.update(camera);
+			player.velocity.y += gravity;
+
+			camera.z += player.velocity.z;
+			camera.x += player.velocity.x;
+			camera.y += player.velocity.y;			
+			
+			
+			resolveSphereCollision(player.velocity);
+			
 			
 			for(auto& d : dogs)
 			{
@@ -183,19 +191,11 @@ int main()
 
 		}
 		
-		
+		placeTerrain(window);
 		//window.getView().setPortSize({960/8,540/8});
 		window.clear(ws::Hue::white);
 		window.draw(backSprite);
 		
-		float floor = map.getHillHeight(camera.x,camera.z) - 50;
-		if(camera.y > floor)
-		{
-			player.velocity.y = 0;
-			camera.y = floor;
-		}
-		else
-			player.velocity.y += gravity;
 		
 		renderIndices.clear();
 
@@ -270,6 +270,16 @@ int main()
 			
 		}
 		float drawMs = drawTimer.getMilliSeconds();
+
+		int centerX = window.getView().getSize().x / 2;
+		int centerY = window.getView().getSize().y / 2;
+		float scaleAtDepth = (float)camera.perspective / buildDepth;
+		float screenRadius = map.TERRAIN_RADIUS * scaleAtDepth;
+		ws::Line line(
+			{ (float)centerX - screenRadius + 5, (float)centerY },
+			{ (float)centerX + screenRadius - 5, (float)centerY }
+		);
+		window.draw(line);
 
 		
 		
