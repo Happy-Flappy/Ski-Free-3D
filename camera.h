@@ -15,7 +15,7 @@ class Camera
 	double sinYaw = 0;
 	double cosYaw = 0;
 	double sinPitch = 0;
-	double cosPitch = 0;		
+	double cosPitch = 0;
 
 
 	

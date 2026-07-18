@@ -55,29 +55,7 @@ class Map
 		if(d.shapeID < 0 || d.shapeID >= shapes.size())
 			return;
 		ws::Vec3f normal = getTerrainNormal(d.x, d.z);
-		float diffuse = std::max(0.0f, normal.x * sunLight.x + 
-									  normal.y * sunLight.y + 
-									  normal.z * sunLight.z);
-		
-		float ambient = 0.25f;
-		float brightness = ambient + (1.0f - ambient) * diffuse;
-
-		ws::Hue base = ws::Hue::white;
-		
-		
-		ws::Vec3f tinted = {brightness * lightColor.x, brightness * lightColor.y, brightness * lightColor.z};
-		ws::Hue litColor = ws::Hue(
-			(int)(base.r * tinted.x),
-			(int)(base.g * tinted.y),
-			(int)(base.b * tinted.z)
-		);				
-
-
-		ws::Hue::HSV hsv = litColor.toHSV();
-
-		float fogFactor = 1.0f - std::clamp(d.depth / camera.visible, 0.0f, 1.0f);
-		hsv.s *= fogFactor;
-		ws::Hue foggedColor = hsv.toHue();
+		ws::Hue foggedColor = getLighting(ws::Hue::white,normal,{d.x,d.y,d.z},d.depth,camera.visible);
 
 		shapes[d.shapeID].setFillColor(foggedColor);
 		shapes[d.shapeID].setBorderColor(foggedColor);				

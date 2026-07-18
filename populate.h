@@ -58,7 +58,36 @@ void populate(std::string path)
 		renders.push_back(r);
 	} 
  */	
- 
+	for(int a=0;a<100;a++)
+	{
+		int x = std::rand()% map.width;
+		int z = std::rand()% map.depth;
+		int y = map.getHillHeight(x,z) + 50;
+		
+		PointLight lamp;
+		lamp.position = {x,y,z};
+		float cr = (float(std::rand()%255)+1.0f) / 255;
+		float cg = (float(std::rand()%255)+1.0f) / 255;
+		float cb = (float(std::rand()%255)+1.0f) / 255;
+		
+		
+		lamp.color = {cr,cg,cb};       // warm yellow
+		lamp.intensity = 0.8f;                 
+		lamp.radius = 300.0f;                    
+		pointLights.push_back(lamp);
+		
+		Render r;
+		r.x = x;
+		r.y = y;
+		r.z = z;
+		r.spriteID = sprites.size();
+		ws::Sprite spr;
+		spr.setTexture(lampTex);
+		spr.setOrigin(lampTex.getSize().x/2,lampTex.getSize().y * 0.8);
+		r.scale = {1.2,1.2};
+		sprites.push_back(spr);
+		renders.push_back(r);		
+	}
 	
 }
 

@@ -1,6 +1,8 @@
 #ifndef LIGHT_H
 #define LIGHT_H
 
+//the sun is not one of the Light objects because it would require a distance of infinity and a radius of infinity. 
+//Better to just not take distance into account for the sun and only focus on diretcion normals.
 ws::Vec3f sunLight = {0.5, 0.8, 0.5};
 
 std::vector<ws::Vec3f> lightColors = 
@@ -17,7 +19,18 @@ std::vector<ws::Vec3f> lightColors =
 	{0.6, 0.3, 0.7},//Dusk / Twilight	Purple‑blue with pink remnants 9
 	{0.2, 0.2, 0.6}//Blue hour (after sunset)	Deep blue‑purple	 10
 };
-ws::Vec3f lightColor = lightColors[5];
+ws::Vec3f lightColor = lightColors[0];
+
+
+struct PointLight 
+{
+    ws::Vec3f position;   
+    ws::Vec3f color;
+    float intensity;
+    float radius;         // distance at which light fades to zero
+};
+std::vector<PointLight> pointLights;
+
 
 
 void makeSky(ws::Texture &tex,int width,int height)
@@ -62,5 +75,71 @@ void makeSky(ws::Texture &tex,int width,int height)
         }
     }	
 }
+
+
+ws::Hue getLighting(ws::Hue base,ws::Vec3f normal,ws::Vec3f position,float depth,float camVisible)
+{
+
+    float sunDiffuse = std::max(0.0f, normal.x * sunLight.x + 
+                                     normal.y * sunLight.y + 
+                                     normal.z * sunLight.z);
+    float ambient = 0.25f;
+    float sunBrightness = ambient + (1.0f - ambient) * sunDiffuse;
+    ws::Vec3f sunColor = {
+        sunBrightness * lightColor.x,
+        sunBrightness * lightColor.y,
+        sunBrightness * lightColor.z
+    };
+
+	ws::Vec3f totalLightColor = sunColor; 
+	
+    for(auto& pl : pointLights) 
+	{
+        ws::Vec3f dirToLight = pl.position - position;
+        float dist = getDistance(dirToLight);
+        if (dist < 0.0001f) continue;       // skip if light is exactly at the point
+
+        ws::Vec3f dir = dirToLight / dist;
+		
+        // linear falloff inside the radius
+        float t = std::clamp(dist / pl.radius, 0.0f, 1.0f);
+		// quadratic falloff feels more natural
+        float attenuation = 1.0f - t * t;    
+        
+        float pointDiffuse = std::max(0.0f, normal.x * dir.x + 
+                                            normal.y * dir.y + 
+                                            normal.z * dir.z);
+        //add the diffuse contribution form this light to the color.
+		ws::Vec3f pointContrib = pointDiffuse * pl.intensity * attenuation * pl.color;
+        totalLightColor += pointContrib;
+    }	
+	
+    totalLightColor.x = std::min(totalLightColor.x, 1.0f);
+    totalLightColor.y = std::min(totalLightColor.y, 1.0f);
+    totalLightColor.z = std::min(totalLightColor.z, 1.0f);
+	
+	
+    ws::Hue litColor = ws::Hue(
+        (int)(base.r * totalLightColor.x),
+        (int)(base.g * totalLightColor.y),
+        (int)(base.b * totalLightColor.z)
+    );	
+
+
+	ws::Hue::HSV hsv = litColor.toHSV();
+
+	float fogFactor = 1.0f - std::clamp(depth / camVisible, 0.0f, 1.0f);
+	
+	//desaturate
+	hsv.s *= fogFactor;
+    
+/* 	//darkening fog
+	const float darkTarget = 0.05f; // minimum brightness when fully fogged
+    hsv.v = hsv.v * fogFactor + darkTarget * (1.0f - fogFactor);
+	 */
+	ws::Hue finalColor = hsv.toHue();
+	return finalColor;
+}
+
 
 #endif

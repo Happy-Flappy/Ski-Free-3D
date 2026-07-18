@@ -6,6 +6,19 @@
 #include <unordered_map>
 #include <cmath>
 
+ws::Texture actorTex;
+ws::Texture exploTex;
+ws::Texture lampTex;
+void loadTextures()
+{
+	actorTex.loadFromFile("ASSETS//actors.png");
+	actorTex.setScaleMode(ws::Texture::ScaleMode::NearestNeighbor);
+	exploTex.loadFromFile("ASSETS//explo.png");
+	exploTex.setScaleMode(ws::Texture::ScaleMode::NearestNeighbor);	
+	lampTex.loadFromFile("ASSETS//lamp.png");
+	lampTex.setScaleMode(ws::Texture::ScaleMode::NearestNeighbor);	
+	
+}
 
 #include "vec3fStuff.h"
 #include "light.h"
@@ -53,10 +66,10 @@ int main()
 	ws::Window window(960,540,"");
 	ws::Vec2f windowSize = {960.0f,540.0f};
 	
-	map.makeTerrain("converted.png");
+	map.makeTerrain("ASSETS//converted.png");
 	camera = Camera(map.width/2,0,100);
 	camera.visible = 1000;
-	populate("map.bmp");
+	populate("ASSETS//map.bmp");
 	grid.build(renders);	
 	
 	ws::Timer clock;

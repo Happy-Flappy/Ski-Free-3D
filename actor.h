@@ -1,23 +1,4 @@
 
-ws::Texture actorTex;
-ws::Texture exploTex;
-ws::Texture grassTex;
-ws::Texture floor000Tex;
-ws::Texture caveStuffTex;
-void loadTextures()
-{
-	actorTex.loadFromFile("ASSETS//actors.png");
-	actorTex.setScaleMode(ws::Texture::ScaleMode::NearestNeighbor);
-	exploTex.loadFromFile("ASSETS//explo.png");
-	exploTex.setScaleMode(ws::Texture::ScaleMode::NearestNeighbor);	
-	grassTex.loadFromFile("ASSETS//grass.png");
-	grassTex.setScaleMode(ws::Texture::ScaleMode::NearestNeighbor);	
-	floor000Tex.loadFromFile("ASSETS//floor000.png");
-	floor000Tex.setScaleMode(ws::Texture::ScaleMode::NearestNeighbor);
-	caveStuffTex.loadFromFile("ASSETS//caveStuff.png");
-	caveStuffTex.setScaleMode(ws::Texture::ScaleMode::NearestNeighbor);
-	
-}
 
 class Dog
 {
