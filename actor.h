@@ -1,5 +1,4 @@
 
-
 class Dog
 {
 	public:
@@ -519,8 +518,16 @@ class Actor
 	float hillHeight = 0;
 	ws::Vec2f target = {0,0};
 	ws::Vec2f wanderVec = {0,0};
+	ws::Vec2f mapSize = {4,4};
 	
 	float sightDist = 200;
+	int channel = -1;
+	
+	Actor()
+	{
+		channel = wav.getFreeChannel();
+		wav.channel = channel;
+	}
 };
 
 
@@ -530,6 +537,7 @@ class Candivore : public Actor
 	ws::Timer waitTimer;
 	float maxWaitTime = 2;
 	float fleeTimeElapsed = 0;
+	
 	
 	bool updateCandivore()
 	{
@@ -570,8 +578,41 @@ class Candivore : public Actor
 		velocity.x *= 0.9;
 		velocity.z *= 0.9;
 		
+		clampToMap(r);
 		
 		return true;
+	}
+	
+	void clampToMap(Render &r)
+	{
+		if(r.x < 0)
+		{
+			r.x = 0;
+			velocity.x = 0;
+			velocity.z = 0;
+			startWander();
+		}
+		if(r.y < 0)
+		{
+			r.y = 0;
+			velocity.x = 0;
+			velocity.z = 0;
+			startWander();
+		}		
+		if(r.x >= mapSize.x)
+		{
+			r.x = mapSize.x-1;
+			velocity.x = 0;
+			velocity.z = 0;
+			startWander();
+		}		
+		if(r.y >= mapSize.y)
+		{
+			r.y = mapSize.y-1;
+			velocity.x = 0;
+			velocity.z = 0;
+			startWander();
+		}		
 	}
 	
 	void startWander()
@@ -651,9 +692,11 @@ class Mello : public Candivore
 	}shifts;
 	
 	
-	void init()
+	void init(float mapWidth,float mapDepth)
 	{
 		startWander();
+		mapSize.x = mapWidth;
+		mapSize.y = mapDepth;
 		if(!updateCandivore())
 			return;
 		Render &r = renders[renderID];
@@ -661,13 +704,15 @@ class Mello : public Candivore
 		sprite.setTexture(melloTex);
 		currentShift = shifts.stand;
 		sprite.setTextureRect(ws::Shift(currentShift));
-		r.scale = {2,2};
+		sprite.setOrigin(sprite.getTextureRect().width/2,sprite.getTextureRect().height * 0.85);
+		r.scale = {1,1};
 	}
 	
 	void update(float hillHeight,ws::Vec2f target)
 	{
 		this->hillHeight =  hillHeight;
 		this->target = target;
+		
 		if(!updateCandivore())
 			return;
 		Render &r = renders[renderID];
@@ -699,6 +744,19 @@ class Mello : public Candivore
 			}
 			if(state == "flee")
 			{
+				static bool snd1 = false;
+				if(snd1)
+				{
+					snd1 = false;
+					wav.open("ASSETS//melloScared0.wav",channel);
+					wav.play();
+				}
+				else
+				{
+					snd1 = true;
+					wav.open("ASSETS//melloScared1.wav",channel);
+					wav.play();					
+				}
 				currentShift = shifts.panic;
 				currentShift.currentframe = 0;
 				currentShift.start = true;

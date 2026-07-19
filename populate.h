@@ -83,7 +83,7 @@ void populate(std::string path)
 		r.spriteID = sprites.size();
 		ws::Sprite spr;
 		spr.setTexture(lampTex);
-		spr.setOrigin(lampTex.getSize().x/2,lampTex.getSize().y * 0.8);
+		spr.setOrigin(lampTex.getSize().x/2,lampTex.getSize().y * 0.9);
 		r.scale = {1.2,1.2};
 		sprites.push_back(spr);
 		renders.push_back(r);		

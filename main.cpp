@@ -21,7 +21,7 @@ void loadTextures()
 	lampTex.setScaleMode(ws::Texture::ScaleMode::NearestNeighbor);	
 	mintKillerTex.loadFromFile("ASSETS//MintKiller.png");
 	mintKillerTex.setScaleMode(ws::Texture::ScaleMode::NearestNeighbor);	
-	melloTex.loadFromFile("ASSETS//UnMelloFellow.png");
+	melloTex.loadFromFile("ASSETS//UnMelloFellow-2.png");
 	melloTex.setScaleMode(ws::Texture::ScaleMode::NearestNeighbor);	
 	
 }
@@ -115,7 +115,7 @@ int main()
 		mellos.push_back(Mello());
 		mellos.back().renderID = renders.size();
 		renders.push_back(r);
-		mellos.back().init();
+		mellos.back().init(map.width,map.depth);
 	}
 	
 	
@@ -251,13 +251,11 @@ int main()
 		window.draw(backSprite);
 		
 		float floor = map.getHillHeight(camera.x,camera.z) - 50;
-		if(camera.y > floor)
-		{
-			player.velocity.y = 0;
-			camera.y = floor;
-		}
-		else
-			player.velocity.y += gravity;
+		
+		//incrementally reach that position for smooth movement.
+		camera.y += (floor - camera.y) * 0.6;
+
+
 		
 		renderIndices.clear();
 
@@ -274,8 +272,8 @@ int main()
 		double nearbyMs = nearbyTimer.getMilliSeconds();
 
 		renderIndices.clear();
-		for(int idx : nearby)
-		{
+		
+		auto addObject = [&](int idx){
 			Render& d = renders[idx];
 			float wx = d.x - camera.x;
 			float wz = d.z - camera.z;
@@ -285,17 +283,17 @@ int main()
 			{
 				d.depth = cz;
 				renderIndices.push_back(idx);
-			}
-		}
-		
-		renderIndices.push_back(snowman.renderID);
+			}			
+		};
+		for(int idx : nearby)
+			addObject(idx);
+		addObject(snowman.renderID);
 		for(auto& d : dogs)
-			renderIndices.push_back(d.renderID);
-
+			addObject(d.renderID);
 		for(auto& m : mintKillers)
-			renderIndices.push_back(m.renderID);
+			addObject(m.renderID);
 		for(auto& m : mellos)
-			renderIndices.push_back(m.renderID);
+			addObject(m.renderID);
 
 
 		ws::Timer sortTimer;
