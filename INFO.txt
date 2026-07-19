@@ -1,0 +1,32 @@
+Candivores is a Pseudo 3d game about hunting down the heavily sought after candy creatures of Candivore Land. 
+
+Creatures featured:
+
+
+Marshmello - Safe non-hunted
+Striped hard candy - Safe non-hunted 
+Striped Peppermint balls - dangerous - duplicates itself as it chases you - bounces around a lot
+Candy Cane - safe grazing creature - tilts its head downwards to scrape the snow with its hook when looking for food. Uses its hands to pick up what it found.
+Hot chocolate monster - dangerous carnivore
+Gingerbread Man - dangerous carnivore
+Snowman - Extremely dangerous carnivore
+
+
+
+Decorations:
+
+Stuff from explo png such as (lollypops,architechtural items)
+Foliage
+Candy cane forest - home to the candy cane grazer
+
+
+Actions:
+
+Map with hunted creature location.
+Trophy room
+Healthbar above creatures
+Blowtorch gun - limited damage
+Glue gun - slows down creatures
+
+Temporary powerups like speedy eggbert - lollypop gives speed(with sparkles trail) and jump
+

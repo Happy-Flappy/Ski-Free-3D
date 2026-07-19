@@ -9,6 +9,8 @@
 ws::Texture actorTex;
 ws::Texture exploTex;
 ws::Texture lampTex;
+ws::Texture mintKillerTex;
+ws::Texture melloTex;
 void loadTextures()
 {
 	actorTex.loadFromFile("ASSETS//actors.png");
@@ -17,6 +19,10 @@ void loadTextures()
 	exploTex.setScaleMode(ws::Texture::ScaleMode::NearestNeighbor);	
 	lampTex.loadFromFile("ASSETS//lamp.png");
 	lampTex.setScaleMode(ws::Texture::ScaleMode::NearestNeighbor);	
+	mintKillerTex.loadFromFile("ASSETS//MintKiller.png");
+	mintKillerTex.setScaleMode(ws::Texture::ScaleMode::NearestNeighbor);	
+	melloTex.loadFromFile("ASSETS//UnMelloFellow.png");
+	melloTex.setScaleMode(ws::Texture::ScaleMode::NearestNeighbor);	
 	
 }
 
@@ -85,6 +91,32 @@ int main()
 	snowman.renderID = renders.size();
 	renders.push_back(manRender);
 	snowman.update(map.getHillHeight(renders.back().x,renders.back().z+200),{camera.x,camera.z});
+	
+	/* Render mintRender;
+	mintRender.x = camera.x;
+	mintRender.z = camera.z + 200;
+	mintRender.y = map.getHillHeight(camera.x,camera.z) - 50;
+	mintRender.spriteID = sprites.size();
+	sprites.push_back(ws::Sprite());
+	mintKillers.push_back(MintKillers());
+	mintKillers.back().renderID = renders.size();
+	renders.push_back(mintRender);
+	mintKillers.back().update(map.getHillHeight(renders.back().x,renders.back().z + 200),{camera.x,camera.z});
+	 */
+	
+	for(int a=0;a<100;a++)
+	{
+		Render r;
+		r.x = std::rand() % map.width;
+		r.z = std::rand() % map.depth;
+		r.y = camera.y;
+		r.spriteID = sprites.size();
+		sprites.push_back(ws::Sprite());
+		mellos.push_back(Mello());
+		mellos.back().renderID = renders.size();
+		renders.push_back(r);
+		mellos.back().init();
+	}
 	
 	
 	ws::Texture backTex;
@@ -192,7 +224,24 @@ int main()
 			{
 				Render &r = renders[snowman.renderID];
 				snowman.update(map.getHillHeight(r.x,r.z),{camera.x,camera.z});
-			}			
+			}		
+			for(auto& m : mintKillers)
+			{
+				if(m.renderID < renders.size() && m.renderID >= 0)
+				{
+					Render &r = renders[m.renderID];
+					m.update(map.getHillHeight(r.x,r.z),{camera.x,camera.z});
+				}
+			}
+			for(auto& m : mellos)
+			{
+				if(m.renderID < renders.size() && m.renderID >= 0)
+				{
+					Render &r = renders[m.renderID];
+					m.update(map.getHillHeight(r.x,r.z),{camera.x,camera.z});
+				}
+			}
+			
 
 		}
 		
@@ -243,7 +292,12 @@ int main()
 		for(auto& d : dogs)
 			renderIndices.push_back(d.renderID);
 
-	
+		for(auto& m : mintKillers)
+			renderIndices.push_back(m.renderID);
+		for(auto& m : mellos)
+			renderIndices.push_back(m.renderID);
+
+
 		ws::Timer sortTimer;
 		std::sort(renderIndices.begin(), renderIndices.end(), [](int a, int b){
 			return renders[a].depth > renders[b].depth;
@@ -284,6 +338,8 @@ int main()
 		}
 		float drawMs = drawTimer.getMilliSeconds();
 
+
+		
 		
 		
 		window.display();

@@ -19,7 +19,7 @@ std::vector<ws::Vec3f> lightColors =
 	{0.6, 0.3, 0.7},//Dusk / Twilight	Purple‑blue with pink remnants 9
 	{0.2, 0.2, 0.6}//Blue hour (after sunset)	Deep blue‑purple	 10
 };
-ws::Vec3f lightColor = lightColors[0];
+ws::Vec3f lightColor = lightColors[7];
 
 
 struct PointLight 
