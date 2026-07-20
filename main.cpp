@@ -31,7 +31,7 @@ void loadTextures()
 #include "camera.h"
 
 
-
+ws::Wav music,atmos;
 std::vector<ws::Sprite> sprites;
 std::vector<ws::Radial> shapes;
 
@@ -61,9 +61,9 @@ int main()
 	
 	normalize(sunLight);
 	
-	ws::Wav music,atmos;
- 	//music.open("ASSETS/MUSIC000.midi",0,true);
-	//music.play();
+	
+ 	music.open("ASSETS/song1.mid",0,true);
+	music.play();
 	atmos.open("ASSETS/creatorshome-mountain-wind-371074.mp3",1,true);
 	atmos.play(); 
 	
@@ -104,7 +104,7 @@ int main()
 	mintKillers.back().update(map.getHillHeight(renders.back().x,renders.back().z + 200),{camera.x,camera.z});
 	 */
 	
-	for(int a=0;a<100;a++)
+	for(int a=0;a<50;a++)
 	{
 		Render r;
 		r.x = std::rand() % map.width;
@@ -141,10 +141,16 @@ int main()
 	while(window.isOpen())
 	{
 		
-/* 		if(music.isFinished())
+  		if(music.isFinished())
+		{
 			music.setProgress(0);
+			music.play();
+		}
 		if(atmos.isFinished())
-			atmos.setProgress(0); */
+		{
+			atmos.setProgress(0); 
+			atmos.play();
+		} 
 		
 		timesincelastupdate += clock.getSeconds();
 		clock.restart();
@@ -160,57 +166,14 @@ int main()
 		while(timesincelastupdate > timeperframe)
 		{
 			timesincelastupdate -= timeperframe;
-			
-			
-			
-			camera.z += player.velocity.z;
-			camera.x += player.velocity.x;
-			camera.y += player.velocity.y;
-			
-			float constSpeed = 2;
-			
-			if (ws::Global::getButton('W'))
-			{
-				player.velocity.x =  sinYaw * constSpeed;
-				player.velocity.z =  cosYaw * constSpeed;
-			}
-			if (ws::Global::getButton('S'))
-			{
-				player.velocity.x = -sinYaw * constSpeed;
-				player.velocity.z = -cosYaw * constSpeed;
-			}
-			if (ws::Global::getButton('A'))
-			{
-				player.velocity.x = -cosYaw * constSpeed;
-				player.velocity.z =  sinYaw * constSpeed;
-			}
-			if (ws::Global::getButton('D'))
-			{
-				player.velocity.x =  cosYaw * constSpeed;
-				player.velocity.z = -sinYaw * constSpeed;
-			}
-			
- 			static const float mouseSensitivityYaw = 0.005f;
-			static const float mouseSensitivityPitch = 0.005f;
-			static ws::Vec2i lastMousePos = ws::Global::getMousePos(window);	
 
-			ws::Vec2i currentMousePos = ws::Global::getMousePos(window);
-			int deltaX = currentMousePos.x - lastMousePos.x;
-			int deltaY = currentMousePos.y - lastMousePos.y;
-
-			camera.yaw   += deltaX * mouseSensitivityYaw;
-			camera.pitch += deltaY * mouseSensitivityPitch;
-			camera.pitch = std::clamp(camera.pitch, -1.57f, 1.57f);
-
-			lastMousePos = currentMousePos;			
-			
 			if(moveTimer.getSeconds() > 1)
 			{
 				angle += 1;
 				moveTimer.restart();
 			}
 
-			player.update(camera);
+			player.update(camera,window);
 			
 			for(auto& d : dogs)
 			{
@@ -250,10 +213,7 @@ int main()
 		window.clear(ws::Hue::white);
 		window.draw(backSprite);
 		
-		float floor = map.getHillHeight(camera.x,camera.z) - 50;
-		
-		//incrementally reach that position for smooth movement.
-		camera.y += (floor - camera.y) * 0.6;
+
 
 
 		
@@ -279,6 +239,7 @@ int main()
 			float wz = d.z - camera.z;
 			float cz = wx * sinYaw + wz * cosYaw;
 			float cx = wx * cosYaw - wz * sinYaw;
+			cz -= 0.3;
 			if(cz > 0 && cz < camera.visible && cx > -camera.visible && cx < camera.visible)
 			{
 				d.depth = cz;

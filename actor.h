@@ -176,6 +176,8 @@ class Snowman
 		
 		if(r.y >= hillHeight)//touching the ground or close to it.
 		{
+			music.open("ASSETS/song1-fast.mid",0,true);
+			music.play();
 			state = "chase";
 			currentShift = shifts.chase;
 			
@@ -748,13 +750,13 @@ class Mello : public Candivore
 				if(snd1)
 				{
 					snd1 = false;
-					wav.open("ASSETS//melloScared0.wav",channel);
+					wav.open("ASSETS//melloScared0.wav",channel,false);
 					wav.play();
 				}
 				else
 				{
 					snd1 = true;
-					wav.open("ASSETS//melloScared1.wav",channel);
+					wav.open("ASSETS//melloScared1.wav",channel,false);
 					wav.play();					
 				}
 				currentShift = shifts.panic;

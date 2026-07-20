@@ -5,71 +5,59 @@
 class Player
 {
 	public:
-	
-	float forwardVel = 0;
 	ws::Vec3f velocity = {0,0,0};
+	
 	
 	Player() {}
 	
-	ws::Wav sledSnd;
- 	bool sndLoaded = false;
-	void update(Camera &camera)	
+	void update(Camera &camera,ws::Window &window)	
 	{
-		if(!sndLoaded)
+		float floor = map.getHillHeight(camera.x,camera.z) - 50;
+		//incrementally reach that position for smooth movement.
+		camera.y += (floor - camera.y) * 0.6;
+		
+		camera.z += velocity.z;
+		camera.x += velocity.x;
+		camera.y += velocity.y;
+		
+		float constSpeed = 2;
+		
+		if (ws::Global::getButton('W'))
 		{
-			sledSnd.open("ASSETS//sspsurvival-sledding-on-snow-sliding-on-snow-snow-and-sledding-16590.mp3",3);
-			sndLoaded = true;
+			velocity.x =  camera.sinYaw * constSpeed;
+			velocity.z =  camera.cosYaw * constSpeed;
 		}
-		static bool startedSpeed = false;
-		if(velocity.z > 3 || velocity.x > 3)
+		if (ws::Global::getButton('S'))
 		{
-			if(!startedSpeed)
-			{
-				ws::Wav::PlayFree("ASSETS/alexzavesa-swoosh-long-463613.mp3",2);
-				startedSpeed = true;
-			}
-			
-			if(ws::Wav::getChannelStatus(sledSnd.channel) == "stopped" || sledSnd.isFinished())
-			{
-				sledSnd.setProgress(0);
-				sledSnd.play();				
-			}
+			velocity.x = -camera.sinYaw * constSpeed;
+			velocity.z = -camera.cosYaw * constSpeed;
 		}
-		else
+		if (ws::Global::getButton('A'))
 		{
-			sledSnd.stop();
-			startedSpeed = false;
+			velocity.x = -camera.cosYaw * constSpeed;
+			velocity.z =  camera.sinYaw * constSpeed;
+		}
+		if (ws::Global::getButton('D'))
+		{
+			velocity.x =  camera.cosYaw * constSpeed;
+			velocity.z = -camera.sinYaw * constSpeed;
 		}	
-		
-		const float delta = 3.0f;
-		
-		float heightLeft  = map.getHillHeight(camera.x - delta, camera.z);
-		float heightRight = map.getHillHeight(camera.x + delta, camera.z);
-		float heightBack  = map.getHillHeight(camera.x, camera.z - delta);
-		float heightFront = map.getHillHeight(camera.x, camera.z + delta);		
 
-		float slopeX = (heightLeft - heightRight) / (2.0f * delta);
-		float slopeZ = (heightBack - heightFront) / (2.0f * delta);
 
-		float forwardSlope = slopeX * std::sin(camera.yaw) + slopeZ * std::cos(camera.yaw);
-		
-		const float SLOPE_ACCEL    = 0.3f;
-		const float FRICTION_DECEL = 0.05f;
+		static const float mouseSensitivityYaw = 0.005f;
+		static const float mouseSensitivityPitch = 0.005f;
+		static ws::Vec2i lastMousePos = ws::Global::getMousePos(window);	
 
-		velocity.x -= forwardSlope * SLOPE_ACCEL * std::sin(camera.yaw);
-		velocity.z -= forwardSlope * SLOPE_ACCEL * std::cos(camera.yaw);
+		ws::Vec2i currentMousePos = ws::Global::getMousePos(window);
+		int deltaX = currentMousePos.x - lastMousePos.x;
+		int deltaY = currentMousePos.y - lastMousePos.y;
+
+		camera.yaw   += deltaX * mouseSensitivityYaw;
+		camera.pitch += deltaY * mouseSensitivityPitch;
+		camera.pitch = std::clamp(camera.pitch, -1.57f, 1.57f);
+
+		lastMousePos = currentMousePos;			
 		
-		float speed = std::sqrt(velocity.x * velocity.x + velocity.z * velocity.z);
-		const float EPSILON = 1e-6f;
-		if(speed > EPSILON) {
-			float decel = std::min(FRICTION_DECEL, speed);
-			velocity.x -= decel * (velocity.x / speed);
-			velocity.z -= decel * (velocity.z / speed);
-			if(std::sqrt(velocity.x*velocity.x + velocity.z*velocity.z) < EPSILON) {
-				velocity.x = 0.0f;
-				velocity.z = 0.0f;
-			}
-		}
 	}
 };
 
