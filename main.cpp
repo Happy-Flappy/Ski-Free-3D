@@ -67,6 +67,7 @@ int main()
 	atmos.open("ASSETS/creatorshome-mountain-wind-371074.mp3",1,true);
 	atmos.play(); 
 	
+	
 	srand(time(nullptr));
 	
 	ws::Window window(960,540,"");
@@ -74,7 +75,7 @@ int main()
 	
 	map.makeTerrain("ASSETS//converted.png");
 	camera = Camera(map.width/2,0,100);
-	camera.visible = 1000;
+	camera.visible = 500;
 	populate("ASSETS//map.bmp");
 	grid.build(renders);	
 	
@@ -83,14 +84,14 @@ int main()
 	double timeperframe = 1.f/60.f;
 	
 	Render manRender;
-	manRender.x = std::rand() % map.width;
-	manRender.z = std::rand() % map.depth;
-	manRender.y = camera.y;
+	manRender.x = camera.x;//std::rand() % map.width;
+	manRender.z = camera.y;//std::rand() % map.depth;
+	manRender.y = map.getHillHeight(manRender.x,manRender.y);
 	manRender.spriteID = sprites.size();
 	sprites.push_back(ws::Sprite());
 	snowman.renderID = renders.size();
 	renders.push_back(manRender);
-	snowman.update(map.getHillHeight(renders.back().x,renders.back().z+200),{camera.x,camera.z});
+	snowman.init(map.width,map.depth);
 	
 	/* Render mintRender;
 	mintRender.x = camera.x;
@@ -104,19 +105,7 @@ int main()
 	mintKillers.back().update(map.getHillHeight(renders.back().x,renders.back().z + 200),{camera.x,camera.z});
 	 */
 	
-	for(int a=0;a<50;a++)
-	{
-		Render r;
-		r.x = std::rand() % map.width;
-		r.z = std::rand() % map.depth;
-		r.y = camera.y;
-		r.spriteID = sprites.size();
-		sprites.push_back(ws::Sprite());
-		mellos.push_back(Mello());
-		mellos.back().renderID = renders.size();
-		renders.push_back(r);
-		mellos.back().init(map.width,map.depth);
-	}
+
 	
 	
 	ws::Texture backTex;
@@ -140,21 +129,19 @@ int main()
 
 	while(window.isOpen())
 	{
-		
-  		if(music.isFinished())
+		if(music.isFinished())
 		{
 			music.setProgress(0);
 			music.play();
 		}
 		if(atmos.isFinished())
 		{
-			atmos.setProgress(0); 
+			atmos.setProgress(0);
 			atmos.play();
-		} 
+		}
 		
-		timesincelastupdate += clock.getSeconds();
-		clock.restart();
-		
+		float dt = clock.restart();
+		timesincelastupdate += dt;
 		camera.getTrigs();
 		float sinYaw = camera.sinYaw;
 		float cosYaw = camera.cosYaw;
@@ -175,14 +162,7 @@ int main()
 
 			player.update(camera,window);
 			
-			for(auto& d : dogs)
-			{
-				if(d.renderID < renders.size() && d.renderID >= 0)
-				{
-					Render &r = renders[d.renderID];
-					d.update(map.getHillHeight(r.x,r.z));
-				}
-			}
+			
 			if(snowman.renderID < renders.size() && snowman.renderID >= 0)
 			{
 				Render &r = renders[snowman.renderID];
@@ -239,7 +219,6 @@ int main()
 			float wz = d.z - camera.z;
 			float cz = wx * sinYaw + wz * cosYaw;
 			float cx = wx * cosYaw - wz * sinYaw;
-			cz -= 0.3;
 			if(cz > 0 && cz < camera.visible && cx > -camera.visible && cx < camera.visible)
 			{
 				d.depth = cz;
@@ -249,8 +228,6 @@ int main()
 		for(int idx : nearby)
 			addObject(idx);
 		addObject(snowman.renderID);
-		for(auto& d : dogs)
-			addObject(d.renderID);
 		for(auto& m : mintKillers)
 			addObject(m.renderID);
 		for(auto& m : mellos)

@@ -20,6 +20,10 @@ class Player
 		camera.x += velocity.x;
 		camera.y += velocity.y;
 		
+		velocity.x *= 0.95;
+		velocity.z *= 0.95;
+		
+		
 		float constSpeed = 2;
 		
 		if (ws::Global::getButton('W'))

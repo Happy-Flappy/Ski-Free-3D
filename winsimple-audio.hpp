@@ -33,6 +33,7 @@ namespace ws
 		float totalLength = 0;
 		bool isPlaying = false;
 		int volume = 100;
+		bool loop = false;
 		
 		public:
 		
@@ -276,6 +277,11 @@ namespace ws
 			return true;
 		}
 		
+		void setLoop(bool boolean = true)
+		{
+			loop = boolean;
+		}
+		
 		void play()
 		{
 			if(ID.empty())
@@ -289,6 +295,7 @@ namespace ws
 				return;
 			
 			std::string command = "play " + ID;
+			if(loop) command += " repeat"; 
 			if(!mciSimple(command))
 				return;		
 			
@@ -427,7 +434,7 @@ namespace ws
 	    		std::cerr << "Unsupported Audio Action: isFinished() cannot be used before using open()\n";
 	    		return false;
 			}
-			if(getProgress() >= getLength())
+			if(getProgress() >= getLength() - 1000)
 			{
 				if(isPlaying) stop();
 				return true;

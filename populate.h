@@ -27,18 +27,23 @@ void populate(std::string path)
 				r.spriteID = sprites.size();
 				sprites.push_back(sprite);
 			}
-			if(c == ws::Hue(31,31,31))
-			{
-				Dog d;
-				d.renderID = renders.size();
-				dogs.push_back(d);
-				dogs.back().update(r.y);
-				r.spriteID = sprites.size();
-				sprites.push_back(ws::Sprite());
-				sprites.back().setOrigin(sprites.back().getTextureRect().width/2, sprites.back().getTextureRect().height + 10);
-			}
 			renders.push_back(r);
 		}
+	}
+
+
+	for(int a=0;a<50;a++)
+	{
+		Render r;
+		r.x = std::rand() % map.width;
+		r.z = std::rand() % map.depth;
+		r.y = camera.y;
+		r.spriteID = sprites.size();
+		sprites.push_back(ws::Sprite());
+		mellos.push_back(Mello());
+		mellos.back().renderID = renders.size();
+		renders.push_back(r);
+		mellos.back().init(map.width,map.depth);
 	}
 	
 /*  	for(int a=0;a<200;a++)
